@@ -481,7 +481,7 @@ function Responses({ departments }) {
 
       <div className="filters">
         <input
-          placeholder="Search name, programme or department…"
+          placeholder="Search name, programme, department or campus…"
           value={q}
           onChange={(e) => {
             setQ(e.target.value)
@@ -533,6 +533,9 @@ function Responses({ departments }) {
               <Th k="age" sort={sort} order={order} on={toggleSort}>Age</Th>
               <Th k="department" sort={sort} order={order} on={toggleSort}>Department</Th>
               <th>Programme</th>
+              <Th k="level" sort={sort} order={order} on={toggleSort}>Level</Th>
+              <Th k="semester" sort={sort} order={order} on={toggleSort}>Sem.</Th>
+              <Th k="campus" sort={sort} order={order} on={toggleSort}>Campus</Th>
               <Th k="usage_score" sort={sort} order={order} on={toggleSort}>Usage</Th>
               <Th k="dependency_score" sort={sort} order={order} on={toggleSort}>Dep.</Th>
               <Th k="critical_score" sort={sort} order={order} on={toggleSort}>Critical</Th>
@@ -551,6 +554,9 @@ function Responses({ departments }) {
                   <td>{r.age}</td>
                   <td style={{ whiteSpace: 'normal', minWidth: 200 }}>{r.department}</td>
                   <td>{r.program}</td>
+                  <td>{r.level || '—'}</td>
+                  <td>{r.semester || '—'}</td>
+                  <td>{r.campus || '—'}</td>
                   <td>{r.usage_score}</td>
                   <td>{r.dependency_score}</td>
                   <td>{r.critical_score}</td>
@@ -576,7 +582,7 @@ function Responses({ departments }) {
               ))
             ) : (
               <tr>
-                <td colSpan={12} style={{ textAlign: 'center', padding: 40, color: MUTED }}>
+                <td colSpan={15} style={{ textAlign: 'center', padding: 40, color: MUTED }}>
                   {busy ? 'Loading…' : 'No responses match these filters.'}
                 </td>
               </tr>

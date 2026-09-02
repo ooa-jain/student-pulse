@@ -5,8 +5,6 @@ between client and server.
 """
 
 DEPARTMENTS = [
-    "Office of Academic Affairs",
-    "Office of Academic",
     "Department of Computer Science and Engineering",
     "Department of Information Science and Engineering",
     "Department of Aerospace Engineering",
@@ -16,9 +14,9 @@ DEPARTMENTS = [
     "Department of Electronics and Communication Engineering",
     "Department of Food Technology",
     "Department of Humanities & Social Sciences",
-    "Department of CERSSE",
-    "Department of SSER",
-    "Department of Jainology",
+    "CERSSE",
+    "SSER",
+    "Jainology",
     "Department of Marine Science",
     "Department of Economics",
     "Department of Performing Arts and Cultural Studies",
@@ -40,6 +38,11 @@ DEPARTMENTS = [
     "Department of Design",
     "Department of Art and Design",
 ]
+
+# Asked on the identity screen, straight after the programme.
+LEVELS = ["Undergraduate", "Postgraduate"]
+SEMESTERS = [str(i) for i in range(1, 9)]
+CAMPUSES = ["Bangalore", "Kochi"]
 
 USAGE_ITEMS = [
     "I use generative AI (ChatGPT, Gemini, Copilot) for my academic work",
@@ -144,6 +147,9 @@ def score(usage: list[int], dependency: list[int]) -> dict:
 def meta() -> dict:
     return {
         "departments": DEPARTMENTS,
+        "levels": LEVELS,
+        "semesters": SEMESTERS,
+        "campuses": CAMPUSES,
         "usage_items": USAGE_ITEMS,
         "dependency_items": DEPENDENCY_ITEMS,
         "experience": EXPERIENCE,

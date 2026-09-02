@@ -62,6 +62,9 @@ async def stats(admin: str = Depends(require_admin)):
             "personas": [],
             "departments": [],
             "tools": [],
+            "campuses": [],
+            "levels": [],
+            "semesters": [],
             "durations": [],
             "daily_time": [],
             "timeline": [],
@@ -169,6 +172,35 @@ async def stats(admin: str = Depends(require_admin)):
         {"label": d["_id"], "count": d["count"]} for d in await _facet(count_by("daily"))
     ]
 
+    def labelled(rows: list) -> list:
+        return [
+            {
+                "label": str(r["_id"]) if r["_id"] not in (None, "") else "Not recorded",
+                "count": r["count"],
+                "readiness": round(r.get("readiness") or 0, 1),
+            }
+            for r in rows
+        ]
+
+    def count_with_readiness(field: str):
+        return [
+            {
+                "$group": {
+                    "_id": f"${field}",
+                    "count": {"$sum": 1},
+                    "readiness": {"$avg": "$readiness"},
+                }
+            },
+            {"$sort": {"count": -1}},
+        ]
+
+    campuses = labelled(await _facet(count_with_readiness("campus")))
+    levels = labelled(await _facet(count_with_readiness("level")))
+    semesters = sorted(
+        labelled(await _facet(count_with_readiness("semester"))),
+        key=lambda s: (not s["label"].isdigit(), int(s["label"]) if s["label"].isdigit() else 0),
+    )
+
     timeline = [
         {"date": t["_id"], "count": t["count"]}
         for t in await _facet(
@@ -266,6 +298,9 @@ async def stats(admin: str = Depends(require_admin)):
         "personas": personas,
         "departments": departments,
         "tools": tools,
+        "campuses": campuses,
+        "levels": levels,
+        "semesters": semesters,
         "durations": durations,
         "daily_time": daily_time,
         "timeline": timeline,
@@ -282,6 +317,8 @@ async def list_responses(
     q: str = Query("", max_length=120),
     department: str = Query(""),
     persona: str = Query(""),
+    campus: str = Query(""),
+    level: str = Query(""),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=5, le=200),
     sort: str = Query("created_at"),
@@ -293,11 +330,16 @@ async def list_responses(
             {"name": {"$regex": q, "$options": "i"}},
             {"program": {"$regex": q, "$options": "i"}},
             {"department": {"$regex": q, "$options": "i"}},
+            {"campus": {"$regex": q, "$options": "i"}},
         ]
     if department:
         flt["department"] = department
     if persona:
         flt["persona"] = persona
+    if campus:
+        flt["campus"] = campus
+    if level:
+        flt["level"] = level
 
     allowed_sort = {
         "created_at",
@@ -308,6 +350,9 @@ async def list_responses(
         "critical_score",
         "readiness",
         "department",
+        "campus",
+        "level",
+        "semester",
     }
     if sort not in allowed_sort:
         sort = "created_at"
@@ -348,7 +393,7 @@ async def export_csv(
         header.append("respondent_code")
     else:
         header.append("name")
-    header += ["age", "department", "program"]
+    header += ["age", "department", "program", "level", "semester", "campus"]
     header += [f"usage_{i + 1}" for i in range(len(instrument.USAGE_ITEMS))]
     header += [f"dep_{i + 1}" for i in range(len(instrument.DEPENDENCY_ITEMS))]
     header += [
@@ -371,7 +416,14 @@ async def export_csv(
         n += 1
         row = [str(d["_id"])]
         row.append(f"R{n:05d}" if anonymise else d.get("name", ""))
-        row += [d.get("age", ""), d.get("department", ""), d.get("program", "")]
+        row += [
+            d.get("age", ""),
+            d.get("department", ""),
+            d.get("program", ""),
+            d.get("level", ""),
+            d.get("semester", ""),
+            d.get("campus", ""),
+        ]
         usage = d.get("usage", []) or []
         dep = d.get("dependency", []) or []
         row += [usage[i] if i < len(usage) else "" for i in range(len(instrument.USAGE_ITEMS))]
