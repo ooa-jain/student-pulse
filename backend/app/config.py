@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "AI Pulse"
-    port: int = 8095
+    port: int = 8110
 
     mongo_uri: str = "mongodb://localhost:27017"
     mongo_db: str = "ai_pulse"
