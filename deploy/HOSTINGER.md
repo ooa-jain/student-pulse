@@ -11,12 +11,12 @@ In Hostinger → *Domains* → *DNS / Nameservers*, the record is already in pla
 |------|-------------------|----------------|-----|
 | A    | jain-studentpulse | 31.97.186.191  | 300 |
 
-So the site will live at `jain-studentpulse.<your-domain>` — use that full
-hostname wherever `DOMAIN` appears below. Check it has propagated before asking
-for a certificate:
+So the site lives at **https://jain-studentpulse.juooa.cloud** — that hostname
+is the default everywhere in `deploy/`, so you only pass `DOMAIN=` to override
+it. Check the record has propagated before asking for a certificate:
 
 ```bash
-dig +short jain-studentpulse.<your-domain>     # must print 31.97.186.191
+dig +short jain-studentpulse.juooa.cloud     # must print 31.97.186.191
 ```
 
 ## 2 · Open the firewall
@@ -42,7 +42,7 @@ ssh root@31.97.186.191
 
 curl -fsSL https://raw.githubusercontent.com/ooa-jain/student-pulse/main/deploy/hostinger-deploy.sh -o deploy.sh
 
-DOMAIN=jain-studentpulse.<your-domain> \
+DOMAIN=jain-studentpulse.juooa.cloud \
 MONGO_URI='mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority' \
 ADMIN_USERNAME=ooa-admin \
 ADMIN_PASSWORD='<a real password>' \
@@ -73,7 +73,7 @@ JWT_EXPIRE_MINUTES=480
 
 APP_NAME=AI Pulse
 PORT=8110
-CORS_ORIGINS=https://jain-studentpulse.<your-domain>
+CORS_ORIGINS=https://jain-studentpulse.juooa.cloud
 SERVE_FRONTEND=true
 ```
 
@@ -108,7 +108,7 @@ ss -lntp | grep 8110                    # gunicorn listening on loopback only
   `--bind 127.0.0.1:8110` in the unit file.
 - **`database: unreachable`** — Atlas IP allowlist, or a wrong `MONGO_URI`.
 - **certbot fails** — DNS has not propagated yet, or port 80 is blocked. Fix,
-  then `certbot --nginx -d jain-studentpulse.<your-domain> --redirect`.
+  then `certbot --nginx -d jain-studentpulse.juooa.cloud --redirect`.
 - **Blank page, API works** — the frontend build is missing:
   `cd /var/www/ai-pulse/frontend && npm ci && npm run build && systemctl restart ai-pulse`.
 

@@ -9,7 +9,6 @@
 # First run (as root on the VPS):
 #
 #   curl -fsSL https://raw.githubusercontent.com/ooa-jain/student-pulse/main/deploy/hostinger-deploy.sh -o deploy.sh
-#   DOMAIN=jain-studentpulse.example.com \
 #   MONGO_URI='mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority' \
 #   ADMIN_PASSWORD='a real password' \
 #   CERTBOT_EMAIL=ooa.connect@jainuniversity.ac.in \
@@ -26,6 +25,7 @@ REPO_URL="${REPO_URL:-https://github.com/ooa-jain/student-pulse.git}"
 BRANCH="${BRANCH:-main}"
 PORT="${PORT:-8110}"
 DOMAIN="${DOMAIN:-}"
+DEFAULT_DOMAIN="jain-studentpulse.juooa.cloud"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
 SERVICE_NAME="ai-pulse"
 RUN_USER="www-data"
@@ -67,7 +67,8 @@ ENV_FILE="$APP_DIR/backend/.env"
 if [ -z "$DOMAIN" ] && [ -f "$ENV_FILE" ]; then
     DOMAIN="$(sed -n 's#^CORS_ORIGINS=https\?://\([^,]*\).*#\1#p' "$ENV_FILE" | head -1)"
 fi
-[ -n "$DOMAIN" ] || die "set DOMAIN=jain-studentpulse.<your-domain> (the A record in Hostinger DNS)"
+DOMAIN="${DOMAIN:-$DEFAULT_DOMAIN}"
+say "Deploying $DOMAIN on port $PORT"
 
 # --------------------------------------------------------------------- env ---
 if [ -f "$ENV_FILE" ]; then
@@ -147,7 +148,7 @@ server {
 }
 NGINXEOF
 else
-    sed -e "s/__DOMAIN__/${DOMAIN}/g" \
+    sed -e "s/jain-studentpulse\.juooa\.cloud/${DOMAIN}/g" \
         -e "s#127.0.0.1:8110#127.0.0.1:${PORT}#g" \
         "$APP_DIR/deploy/nginx.conf" > "$SITE"
 fi
@@ -168,7 +169,7 @@ if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
         echo "CERTBOT_EMAIL not set — run manually:  certbot --nginx -d $DOMAIN --redirect"
     fi
     if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
-        sed -e "s/__DOMAIN__/${DOMAIN}/g" \
+        sed -e "s/jain-studentpulse\.juooa\.cloud/${DOMAIN}/g" \
             -e "s#127.0.0.1:8110#127.0.0.1:${PORT}#g" \
             "$APP_DIR/deploy/nginx.conf" > "$SITE"
         nginx -t && systemctl reload nginx

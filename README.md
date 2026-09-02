@@ -55,7 +55,7 @@ ADMIN_USERNAME=ooa-admin
 ADMIN_PASSWORD=<a real password>
 JWT_SECRET=<openssl rand -hex 32>
 PORT=8110
-CORS_ORIGINS=https://jain-studentpulse.<your-domain>
+CORS_ORIGINS=https://jain-studentpulse.juooa.cloud
 SERVE_FRONTEND=true
 ```
 
@@ -95,7 +95,7 @@ First deploy — one command as root on the VPS:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ooa-jain/student-pulse/main/deploy/hostinger-deploy.sh -o deploy.sh
 
-DOMAIN=jain-studentpulse.<your-domain> \
+DOMAIN=jain-studentpulse.juooa.cloud \
 MONGO_URI='mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority' \
 ADMIN_PASSWORD='<a real password>' \
 CERTBOT_EMAIL=ooa.connect@jainuniversity.ac.in \
@@ -115,7 +115,8 @@ bash /var/www/ai-pulse/deploy/hostinger-deploy.sh
 `deploy/HOSTINGER.md` has the full walkthrough — DNS, firewall, the `.env`
 reference, health checks and troubleshooting. `deploy/ai-pulse.service` and
 `deploy/nginx.conf` can also be copied into `/etc/systemd/system/` and
-`/etc/nginx/sites-available/` by hand (replace `__DOMAIN__` in the nginx file).
+`/etc/nginx/sites-available/` by hand — both already carry the real hostname
+and port.
 
 ## API
 
