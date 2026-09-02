@@ -8,10 +8,10 @@ User=www-data
 Group=www-data
 WorkingDirectory=/var/www/ai-pulse/backend
 EnvironmentFile=/var/www/ai-pulse/backend/.env
-ExecStart=/usr/bin/gunicorn app.main:app \
+ExecStart=/var/www/ai-pulse/backend/.venv/bin/gunicorn app.main:app \
     --worker-class uvicorn.workers.UvicornWorker \
     --workers 3 \
-    --bind 127.0.0.1:8095 \
+    --bind 127.0.0.1:8110 \
     --access-logfile - \
     --error-logfile -
 Restart=always
