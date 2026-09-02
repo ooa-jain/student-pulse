@@ -20,6 +20,13 @@ async def get_meta():
 async def submit(payload: SubmissionIn, request: Request):
     if payload.department not in instrument.DEPARTMENTS:
         raise HTTPException(status_code=422, detail="Unknown department")
+    for field, choices in (
+        ("level", instrument.LEVELS),
+        ("semester", instrument.SEMESTERS),
+        ("campus", instrument.CAMPUSES),
+    ):
+        if getattr(payload, field) not in choices:
+            raise HTTPException(status_code=422, detail=f"Invalid {field}")
     for field in ("duration", "daily", "tool"):
         if getattr(payload, field) not in instrument.EXPERIENCE[field]:
             raise HTTPException(status_code=422, detail=f"Invalid {field}")
@@ -41,6 +48,9 @@ async def submit(payload: SubmissionIn, request: Request):
         "name": payload.name,
         "department": payload.department,
         "program": payload.program,
+        "level": payload.level,
+        "semester": payload.semester,
+        "campus": payload.campus,
         "avatar": payload.avatar,
         "tool": payload.tool,
         "duration": payload.duration,

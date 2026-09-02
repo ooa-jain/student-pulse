@@ -11,6 +11,9 @@ class SubmissionIn(BaseModel):
     age: int = Field(ge=13, le=90)
     department: str = Field(min_length=2, max_length=160)
     program: str = Field(min_length=1, max_length=160)
+    level: str = Field(min_length=1, max_length=40)
+    semester: str = Field(min_length=1, max_length=8)
+    campus: str = Field(min_length=1, max_length=60)
     avatar: str = Field(default="Nova", max_length=40)
 
     usage: list[Likert] = Field(min_length=5, max_length=5)
@@ -23,7 +26,7 @@ class SubmissionIn(BaseModel):
     xp: int = Field(default=0, ge=0, le=1000)
     best_streak: int = Field(default=0, ge=0, le=100)
 
-    @field_validator("name", "program", "department")
+    @field_validator("name", "program", "department", "level", "semester", "campus")
     @classmethod
     def _strip(cls, v: str) -> str:
         return " ".join(v.split())

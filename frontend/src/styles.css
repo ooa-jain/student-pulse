@@ -156,6 +156,20 @@ h1 em { font-style: italic; color: var(--orange); }
 .op.sel .dot { border-color: var(--orange); background: var(--orange); }
 .op.sel .dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
 
+/* compact single-value picks — semester 1-8. Named apart from the result
+   card's .chip, which is a different thing entirely. */
+.picks { display: flex; flex-wrap: wrap; gap: 10px; }
+.pick {
+  min-width: 54px; border: 2px solid var(--line); background: #fbfaf6; border-radius: 14px;
+  padding: 12px 14px; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.95rem;
+  color: var(--sub); transition: all 0.16s; text-align: center;
+}
+.pick:hover { border-color: var(--gold); transform: translateY(-3px); }
+.pick.sel {
+  border-color: var(--orange); background: #fff6ec; color: var(--ink); transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(232, 92, 26, 0.18);
+}
+
 /* ---------- inputs ---------- */
 label.fl { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; color: var(--blue); margin-bottom: 10px; }
 input, select {

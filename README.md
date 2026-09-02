@@ -122,7 +122,7 @@ and port.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/meta` | — | departments, items, options, personas |
+| GET | `/api/meta` | — | departments, levels, semesters, campuses, items, options, personas |
 | GET | `/api/pulse` | — | public response counter |
 | POST | `/api/submit` | — | submit a response, returns the scored persona |
 | GET | `/api/result/{id}` | — | re-open a result card |
@@ -133,6 +133,24 @@ and port.
 | GET | `/api/admin/responses` | JWT | paged, searchable, sortable table |
 | DELETE | `/api/admin/responses/{id}` | JWT | remove one response |
 | GET | `/api/admin/export.csv?anonymise=` | JWT | full or anonymised export |
+
+## Identity questions
+
+Level 1 collects age, department, programme (free text, optional) and then three
+closed questions the dashboard slices on:
+
+| Field | Values |
+|---|---|
+| `level` | Undergraduate · Postgraduate |
+| `semester` | 1 – 8 |
+| `campus` | Bangalore · Kochi |
+
+All three are required and validated server-side against
+`instrument.LEVELS / SEMESTERS / CAMPUSES`, so a crafted request cannot store a
+value outside the list. They appear in the responses table (sortable, with
+`?campus=` and `?level=` filters) and in both CSV exports. Responses collected
+before these questions existed simply have the fields missing — the table shows
+`—` and the stats group them under *Not recorded*.
 
 ## Scoring
 

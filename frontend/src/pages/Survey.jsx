@@ -28,6 +28,9 @@ export default function Survey() {
   const [age, setAge] = useState('')
   const [department, setDepartment] = useState('')
   const [program, setProgram] = useState('')
+  const [level, setLevel] = useState('')
+  const [semester, setSemester] = useState('')
+  const [campus, setCampus] = useState('')
   const [usage, setUsage] = useState(Array(5).fill(0))
   const [dependency, setDependency] = useState(Array(6).fill(0))
   const [exp, setExp] = useState({ duration: '', daily: '', tool: '' })
@@ -138,7 +141,7 @@ export default function Survey() {
   }
 
   const nameOk = name.trim().length >= 2
-  const identityOk = Boolean(age && department)
+  const identityOk = Boolean(age && department && level && semester && campus)
   const usageOk = usage.every((v) => v > 0)
   const depOk = dependency.every((v) => v > 0)
   const expOk = exp.duration && exp.daily && exp.tool
@@ -172,6 +175,18 @@ export default function Survey() {
       errs.department = 'Please select your department from the dropdown'
     }
 
+    if (!level) {
+      errs.level = 'Please choose Undergraduate or Postgraduate'
+    }
+
+    if (!semester) {
+      errs.semester = 'Please select your current semester'
+    }
+
+    if (!campus) {
+      errs.campus = 'Please select your campus'
+    }
+
     if (Object.keys(errs).length > 0) {
       setIdentityErrors(errs)
       fireToast('x', 'Action Required', Object.values(errs)[0])
@@ -179,7 +194,7 @@ export default function Survey() {
     }
 
     if (!program.trim()) {
-      setProgram('Undergraduate')
+      setProgram('Not specified')
     }
 
     setIdentityErrors({})
@@ -191,13 +206,16 @@ export default function Survey() {
     setSubmitting(true)
     const finalXp = xp + 20
     const finalAge = Number(age) >= 13 && Number(age) <= 90 ? Number(age) : 20
-    const finalProg = program.trim() || 'Undergraduate'
+    const finalProg = program.trim() || 'Not specified'
     try {
       const res = await api.submit({
         name: name.trim(),
         age: finalAge,
         department: department || 'General',
         program: finalProg,
+        level,
+        semester,
+        campus,
         avatar: avatar || 'Nova',
         usage,
         dependency,
@@ -340,7 +358,7 @@ export default function Survey() {
               Player <em>identity</em>
             </h1>
             <p className="sub">
-              Good to meet you, <b>{name.trim()}</b>. Three quick stats and we&apos;re moving.
+              Good to meet you, <b>{name.trim()}</b>. A few quick stats and we&apos;re moving.
             </p>
 
             <div className={`q${age ? ' answered' : ''}${identityErrors.age ? ' err-box' : ''}`}>
@@ -401,6 +419,62 @@ export default function Survey() {
                   if (e.key === 'Enter') handleContinueIdentity()
                 }}
               />
+            </div>
+
+            <div className={`q${level ? ' answered' : ''}${identityErrors.level ? ' err-box' : ''}`}>
+              <span className="qn">
+                <Icon name="book" /> STAT 04
+              </span>
+              <div className="qt">Are you an undergraduate or a postgraduate student?</div>
+              <OptionGroup
+                options={meta.levels}
+                value={level}
+                onPick={(v) => {
+                  setLevel(v)
+                  if (identityErrors.level) setIdentityErrors((prev) => ({ ...prev, level: '' }))
+                }}
+              />
+              {identityErrors.level && <p className="err">{identityErrors.level}</p>}
+            </div>
+
+            <div className={`q${semester ? ' answered' : ''}${identityErrors.semester ? ' err-box' : ''}`}>
+              <span className="qn">
+                <Icon name="calendar" /> STAT 05
+              </span>
+              <div className="qt">Which semester are you in?</div>
+              <div className="picks">
+                {meta.semesters.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`pick${semester === s ? ' sel' : ''}`}
+                    onClick={() => {
+                      setSemester(s)
+                      if (identityErrors.semester)
+                        setIdentityErrors((prev) => ({ ...prev, semester: '' }))
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              {identityErrors.semester && <p className="err">{identityErrors.semester}</p>}
+            </div>
+
+            <div className={`q${campus ? ' answered' : ''}${identityErrors.campus ? ' err-box' : ''}`}>
+              <span className="qn">
+                <Icon name="building" /> STAT 06
+              </span>
+              <div className="qt">Which campus do you belong to?</div>
+              <OptionGroup
+                options={meta.campuses}
+                value={campus}
+                onPick={(v) => {
+                  setCampus(v)
+                  if (identityErrors.campus) setIdentityErrors((prev) => ({ ...prev, campus: '' }))
+                }}
+              />
+              {identityErrors.campus && <p className="err">{identityErrors.campus}</p>}
             </div>
 
             <button
@@ -675,13 +749,19 @@ function ResultCard({ result, xp, bestStreak, onToast }) {
               <Icon name="book" />
               {result.program}
             </span>
+            {result.semester && (
+              <span className="chip">
+                <Icon name="calendar" />
+                {result.level ? `${result.level} · ` : ''}Semester {result.semester}
+              </span>
+            )}
             <span className="chip">
               <Icon name="bot" />
               {result.tool || 'Generative AI'}
             </span>
             <span className="chip">
               <Icon name="building" />
-              JAIN (Deemed-to-be Univ.)
+              {result.campus ? `${result.campus} campus` : 'JAIN (Deemed-to-be Univ.)'}
             </span>
           </div>
 
