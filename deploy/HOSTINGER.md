@@ -118,6 +118,18 @@ ss -lntp | grep 8110                    # gunicorn listening on loopback only
   certbot --nginx -d jain-studentpulse.juooa.cloud --redirect
   bash /var/www/ai-pulse/deploy/hostinger-deploy.sh   # installs the HTTPS site
   ```
+- **`unknown directive "http2"`** — nginx older than 1.25.1 (Ubuntu 24.04 ships
+  1.24). `deploy/nginx.conf` uses the portable `listen 443 ssl http2;` form and
+  the script upgrades it to `http2 on;` only on newer nginx, so this should not
+  recur. To fix a site file by hand:
+
+  ```bash
+  sed -i -e '/^    http2 on;$/d' \
+         -e 's/^    listen 443 ssl;$/    listen 443 ssl http2;/' \
+         -e 's/^    listen \[::\]:443 ssl;$/    listen [::]:443 ssl http2;/' \
+         /etc/nginx/sites-available/ai-pulse
+  nginx -t && systemctl reload nginx
+  ```
 - **`conflicting server name ... on 0.0.0.0:443, ignored`** — another site on
   this VPS declares the same `server_name` twice. It is a warning, not an
   error, and does not affect `jain-studentpulse.juooa.cloud`.

@@ -130,11 +130,55 @@ systemctl restart "$SERVICE_NAME"
 # ------------------------------------------------------------------- nginx ---
 say "Configuring nginx for $DOMAIN"
 SITE="/etc/nginx/sites-available/${SERVICE_NAME}"
+LINK="/etc/nginx/sites-enabled/${SERVICE_NAME}"
 mkdir -p /var/www/html
+
+# nginx < 1.25.1 (Ubuntu 24.04 ships 1.24) has no `http2 on;` directive, and
+# nginx >= 1.25.1 deprecates `listen ... http2`. Templates carry the portable
+# form; upgrade it in place when the installed nginx is new enough.
+nginx_version() { nginx -v 2>&1 | sed -n 's#.*nginx/\([0-9.]*\).*#\1#p'; }
+version_ge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" = "$2" ]; }
+
+fix_http2() {
+    version_ge "$(nginx_version)" 1.25.1 || return 0
+    sed -i -e 's/^\(\s*\)listen 443 ssl http2;/\1listen 443 ssl;/' \
+           -e 's/^\(\s*\)listen \[::\]:443 ssl http2;/\1listen [::]:443 ssl;\n\1http2 on;/' "$1"
+}
+
+# A host without IPv6 cannot bind `listen [::]:...` — drop those lines there.
+strip_ipv6() {
+    [ -f /proc/net/if_inet6 ] || sed -i '/listen \[::\]/d' "$1"
+}
+
+# Install a candidate site file, but only keep it if nginx accepts it.
+install_site() {
+    local candidate="$1" backup=""
+    if [ -f "$SITE" ]; then backup="$(mktemp)"; cp "$SITE" "$backup"; fi
+    cp "$candidate" "$SITE"
+    ln -sf "$SITE" "$LINK"
+    rm -f /etc/nginx/sites-enabled/default
+    if nginx -t; then
+        systemctl reload nginx
+        [ -n "$backup" ] && rm -f "$backup"
+        return 0
+    fi
+    if [ -n "$backup" ]; then
+        cp "$backup" "$SITE"
+        rm -f "$backup"
+        warn "generated nginx site failed 'nginx -t' — restored the previous one, nginx not reloaded"
+    else
+        rm -f "$SITE" "$LINK"
+        warn "generated nginx site failed 'nginx -t' — removed it, nginx not reloaded"
+    fi
+    return 1
+}
+
+CANDIDATE="$(mktemp)"
+trap 'rm -f "$CANDIDATE"' EXIT
 
 if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
     # No certificate yet — serve plain HTTP so certbot can complete HTTP-01.
-    cat > "$SITE" <<NGINXEOF
+    cat > "$CANDIDATE" <<NGINXEOF
 server {
     listen 80;
     listen [::]:80;
@@ -152,16 +196,16 @@ server {
     }
 }
 NGINXEOF
+    strip_ipv6 "$CANDIDATE"
 else
     sed -e "s/jain-studentpulse\.juooa\.cloud/${DOMAIN}/g" \
         -e "s#127.0.0.1:8110#127.0.0.1:${PORT}#g" \
-        "$APP_DIR/deploy/nginx.conf" > "$SITE"
+        "$APP_DIR/deploy/nginx.conf" > "$CANDIDATE"
+    fix_http2 "$CANDIDATE"
+    strip_ipv6 "$CANDIDATE"
 fi
 
-ln -sf "$SITE" "/etc/nginx/sites-enabled/${SERVICE_NAME}"
-rm -f /etc/nginx/sites-enabled/default
-nginx -t
-systemctl reload nginx
+install_site "$CANDIDATE" || true
 
 # ------------------------------------------------------------------ certbot --
 if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
@@ -179,8 +223,10 @@ if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
     if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
         sed -e "s/jain-studentpulse\.juooa\.cloud/${DOMAIN}/g" \
             -e "s#127.0.0.1:8110#127.0.0.1:${PORT}#g" \
-            "$APP_DIR/deploy/nginx.conf" > "$SITE"
-        nginx -t && systemctl reload nginx
+            "$APP_DIR/deploy/nginx.conf" > "$CANDIDATE"
+        fix_http2 "$CANDIDATE"
+        strip_ipv6 "$CANDIDATE"
+        install_site "$CANDIDATE" || true
     fi
 fi
 
