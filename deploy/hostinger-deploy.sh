@@ -30,21 +30,26 @@ CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
 SERVICE_NAME="ai-pulse"
 RUN_USER="www-data"
 
-say() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
-die() { printf '\n\033[1;31mError: %s\033[0m\n' "$*" >&2; exit 1; }
+say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
+warn() { printf '\n\033[1;33m!!  %s\033[0m\n' "$*" >&2; }
+die()  { printf '\n\033[1;31mError: %s\033[0m\n' "$*" >&2; exit 1; }
+
+# Ubuntu's unattended-upgrades often holds the dpkg lock on a fresh boot;
+# wait for it instead of dying halfway through the deploy.
+apt() { apt-get -o DPkg::Lock::Timeout=600 "$@"; }
 
 [ "$(id -u)" -eq 0 ] || die "run this as root (sudo bash $0)"
 
 # ---------------------------------------------------------------- packages ---
 say "Installing system packages"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git curl ca-certificates nginx python3 python3-venv python3-pip
+apt update -qq || warn "apt-get update had errors (unreachable mirror?) — continuing with the cached index"
+apt install -y -qq git curl ca-certificates nginx python3 python3-venv python3-pip
 
 if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -c2- | cut -d. -f1)" -lt 18 ]; then
     say "Installing Node.js 20"
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt-get install -y -qq nodejs
+    apt install -y -qq nodejs
 fi
 
 # -------------------------------------------------------------------- code ---
@@ -161,12 +166,15 @@ systemctl reload nginx
 # ------------------------------------------------------------------ certbot --
 if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
     say "Requesting a Let's Encrypt certificate for $DOMAIN"
-    apt-get install -y -qq certbot python3-certbot-nginx
-    if [ -n "$CERTBOT_EMAIL" ]; then
+    if ! apt install -y -qq certbot python3-certbot-nginx; then
+        warn "could not install certbot — the site is up on plain HTTP. Retry with:
+    apt-get -o DPkg::Lock::Timeout=600 install -y certbot python3-certbot-nginx
+    certbot --nginx -d $DOMAIN --redirect"
+    elif [ -n "$CERTBOT_EMAIL" ]; then
         certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$CERTBOT_EMAIL" --redirect || \
-            echo "certbot failed — check that $DOMAIN resolves to this server, then re-run this script"
+            warn "certbot failed — check that $DOMAIN resolves to this server and port 80 is open, then re-run this script"
     else
-        echo "CERTBOT_EMAIL not set — run manually:  certbot --nginx -d $DOMAIN --redirect"
+        warn "CERTBOT_EMAIL not set — run manually:  certbot --nginx -d $DOMAIN --redirect"
     fi
     if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
         sed -e "s/jain-studentpulse\.juooa\.cloud/${DOMAIN}/g" \
@@ -179,7 +187,15 @@ fi
 # ------------------------------------------------------------------- check ---
 say "Health check"
 sleep 2
-curl -fsS "http://127.0.0.1:${PORT}/api/health" && echo
+if curl -fsS "http://127.0.0.1:${PORT}/api/health"; then
+    echo
+else
+    warn "the app did not answer on 127.0.0.1:${PORT} — journalctl -u ${SERVICE_NAME} -n 50"
+fi
 systemctl --no-pager --lines=5 status "$SERVICE_NAME" || true
 
-say "Done — https://${DOMAIN}  (survey /, admin /admin, docs /docs)"
+if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
+    say "Done — https://${DOMAIN}  (survey /, admin /admin, docs /docs)"
+else
+    say "Done — http://${DOMAIN}  (no certificate yet; see the warnings above)"
+fi

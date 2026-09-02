@@ -109,6 +109,18 @@ ss -lntp | grep 8110                    # gunicorn listening on loopback only
 - **`database: unreachable`** — Atlas IP allowlist, or a wrong `MONGO_URI`.
 - **certbot fails** — DNS has not propagated yet, or port 80 is blocked. Fix,
   then `certbot --nginx -d jain-studentpulse.juooa.cloud --redirect`.
+- **`Could not get lock /var/lib/dpkg/lock-frontend`** — Ubuntu's
+  unattended-upgrades is mid-run. The script waits up to 10 minutes for the
+  lock; if you hit it on an older copy of the script, finish TLS by hand:
+
+  ```bash
+  apt-get -o DPkg::Lock::Timeout=600 install -y certbot python3-certbot-nginx
+  certbot --nginx -d jain-studentpulse.juooa.cloud --redirect
+  bash /var/www/ai-pulse/deploy/hostinger-deploy.sh   # installs the HTTPS site
+  ```
+- **`conflicting server name ... on 0.0.0.0:443, ignored`** — another site on
+  this VPS declares the same `server_name` twice. It is a warning, not an
+  error, and does not affect `jain-studentpulse.juooa.cloud`.
 - **Blank page, API works** — the frontend build is missing:
   `cd /var/www/ai-pulse/frontend && npm ci && npm run build && systemctl restart ai-pulse`.
 
